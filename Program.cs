@@ -1,6 +1,8 @@
-﻿using System.IO;
+﻿using FlowPrictic.Models;
+using FlowPrictic.Services;
+using System.IO;
 
-string path = "E:\\FlowPrictic\\Logs\\";
+string path = @"E:\FlowPrictic\Logs";
 
 if (!Directory.Exists(path))
 {
@@ -8,32 +10,25 @@ if (!Directory.Exists(path))
     return;
 }
 
-string[] logFiles = Directory.GetFiles(path, "*.log");
+LogFileReader reader = new LogFileReader(path);
+LogParser parser = new LogParser();
+LogAnalyze analyzer = new LogAnalyze();
 
-foreach (string log in logFiles)
+string[] files = await reader.GetLogFilesAsync();
+
+foreach (string file in files)
 {
-    Console.WriteLine($"\n{Path.GetFileName(log)}");
+    Console.WriteLine($"\n{Path.GetFileName(file)}");
 
-    Dictionary<string, int> LogAnalyze = new Dictionary<string, int>
-    {
-        ["[INFO]"] = 0,
-        ["[ERROR]"] = 0,
-        ["[WARNING]"] = 0
-    };
-    string[] lines = File.ReadAllLines(log);
+    string[] lines = await reader.ReadFileAsync(file);
 
-    foreach (string line in lines)
-    {
-        foreach (string type in LogAnalyze.Keys)
-        {
-            if (line.Contains(type))
-            {
-                LogAnalyze[type]++;
-                break;
-            }
-        }
-    }
-    Console.WriteLine($"INFO: {LogAnalyze["[INFO]"]}");
-    Console.WriteLine($"ERROR: {LogAnalyze["[ERROR]"]}");
-    Console.WriteLine($"WARNING: {LogAnalyze["[WARNING]"]}");
+    List<LogEntry> entries = parser.Parse(lines);
+
+    Dictionary<LogType, int> statistics = analyzer.Analyze(entries);
+
+    Console.WriteLine($"INFO: {statistics[LogType.info]}");
+    Console.WriteLine($"ERROR: {statistics[LogType.error]}");
+    Console.WriteLine($"WARNING: {statistics[LogType.warning]}");
+    Console.WriteLine($"INVALID: {statistics[LogType.invalid]}");
 }
+    

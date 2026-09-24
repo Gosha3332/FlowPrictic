@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Folder Include="Logs\" />
+    <Folder Include="Report\" />
   </ItemGroup>
 
 </Project>
