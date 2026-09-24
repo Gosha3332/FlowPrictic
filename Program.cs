@@ -1,74 +1,39 @@
-﻿using FlowPrictic.Models;
+﻿using System.IO;
 
-Console.WriteLine("REPORT PROCESSOR \n------------------");
-Console.WriteLine();
+string path = "E:\\FlowPrictic\\Logs\\";
 
-SemaphoreSlim semaphore = new SemaphoreSlim(2);
-Statistics statistic = new Statistics();
-
-Report sales = TaskBuilder("Sales");
-Report customers = TaskBuilder("Customers");
-Report wirehouse = TaskBuilder("Wirehouse");
-
-/*object resultLock = new object();*/
-
-Report TaskBuilder(string name) 
+if (!Directory.Exists(path))
 {
-    return new Report (name, new Task(() => ReportProcessor(name)));
+    Console.WriteLine("Такого пути нет");
+    return;
 }
 
-void ReportProcessor(string name) 
+string[] logFiles = Directory.GetFiles(path, "*.log");
+
+foreach (string log in logFiles)
 {
-    Console.WriteLine($"{name, -15}started");
-    semaphore.Wait();
-    try
+    Console.WriteLine($"\n{Path.GetFileName(log)}");
+
+    Dictionary<string, int> LogAnalyze = new Dictionary<string, int>
     {
-        for (int i = 0; i < 1000; i++)
+        ["[INFO]"] = 0,
+        ["[ERROR]"] = 0,
+        ["[WARNING]"] = 0
+    };
+    string[] lines = File.ReadAllLines(log);
+
+    foreach (string line in lines)
+    {
+        foreach (string type in LogAnalyze.Keys)
         {
-            statistic.AddProcessedRecords();
+            if (line.Contains(type))
+            {
+                LogAnalyze[type]++;
+                break;
+            }
         }
-        statistic.ReportSuccess();
     }
-    finally
-    {
-        semaphore.Release();
-    }
-    
+    Console.WriteLine($"INFO: {LogAnalyze["[INFO]"]}");
+    Console.WriteLine($"ERROR: {LogAnalyze["[ERROR]"]}");
+    Console.WriteLine($"WARNING: {LogAnalyze["[WARNING]"]}");
 }
-
-/*void ReportProcessor(string name)
-{
-    Console.WriteLine($"{name,-15}started");
-
-    Monitor.Enter(resultLock);
-
-    try
-    {
-        for (int i = 0; i < 1000; i++)
-        {
-            result++;
-        }
-    }
-    finally
-    {
-        Monitor.Exit(resultLock);
-    }
-}*/
-
-
-
-sales.Task.Start();
-customers.Task.Start();
-wirehouse.Task.Start();
-
-await Task.WhenAll(sales.Task, customers.Task, wirehouse.Task);
-
-Console.WriteLine($"\n{sales.Name,-15}{sales.Task.Status}");
-Console.WriteLine($"{customers.Name,-15}{customers.Task.Status}");
-Console.WriteLine($"{wirehouse.Name,-15}{wirehouse.Task.Status}");
-
-
-Console.WriteLine("------------------ \nRESULT");
-
-Console.WriteLine($"Processed records: {statistic.ProcessedRecords}");
-Console.WriteLine($"Successful reports: {statistic.SuccessfulReports}");
